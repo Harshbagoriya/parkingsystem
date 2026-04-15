@@ -1,7 +1,6 @@
 require('dotenv').config()
 const express = require('express')
 const http = require('http')
-const path = require('path')
 const { Server } = require('socket.io')
 const cors = require('cors')
 const morgan = require('morgan')
@@ -46,14 +45,8 @@ io.on('connection', socket => {
   socket.on('disconnect', () => console.log(`[WS] Client disconnected: ${socket.id}`))
 })
 
-// ── Frontend Static Files (Production) ───────────────────────
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')))
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/dist', 'index.html'))
-  })
-}
+// ── Frontend is deployed separately on Vercel ─────────────────
+// Static file serving removed — this server is a pure API server.
 
 // ── Global error handler ─────────────────────────────────────
 app.use((err, _req, res, _next) => {
