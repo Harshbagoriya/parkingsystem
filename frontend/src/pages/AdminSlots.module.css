@@ -1,0 +1,78 @@
+/* AdminSlots.module.css */
+.page { animation: fadeUp 0.3s ease both; }
+.header { margin-bottom: 24px; }
+.title    { font-size:24px; font-family:var(--font-display); margin-bottom:4px; }
+.subtitle { font-size:13px; color:var(--text-muted); }
+
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+.cardTitle { font-family:var(--font-display); font-size:16px; margin-bottom:20px; }
+
+.form { display:flex; flex-direction:column; gap:16px; }
+.field { display:flex; flex-direction:column; gap:7px; }
+.field label { font-size:11px; font-weight:500; color:var(--text-muted); letter-spacing:0.4px; text-transform:uppercase; }
+.field input, .field select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border 0.15s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field select { appearance:none; cursor:pointer; }
+
+.statusBtns { display:flex; gap:8px; }
+.statusOpt {
+  flex:1; border:1px solid var(--border-md); border-radius:var(--radius);
+  padding:10px 8px; display:flex; align-items:center; gap:8px;
+  cursor:pointer; transition:all 0.15s;
+}
+.statusOpt:hover { border-color:var(--sc); }
+.statusOptActive { border-color:var(--sc) !important; background:color-mix(in srgb, var(--sc) 10%, transparent); }
+.statusDot { width:8px; height:8px; border-radius:50%; }
+
+.noteBox {
+  background: rgba(61,158,255,0.05);
+  border: 1px solid rgba(61,158,255,0.12);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.addBtn {
+  background: var(--accent);
+  color: #fff; border:none; border-radius:var(--radius);
+  padding:12px; font-size:14px; font-weight:600; font-family:var(--font-display);
+  transition:all 0.15s;
+}
+.addBtn:hover { background:#2a8ef0; transform:translateY(-1px); }
+
+.updateBtn {
+  background: var(--bg-surface); color:var(--text);
+  border:1px solid var(--border-md); border-radius:var(--radius);
+  padding:12px; font-size:14px; font-weight:600; font-family:var(--font-display);
+  transition:all 0.15s;
+}
+.updateBtn:hover { border-color:var(--accent); color:var(--accent); }
+
+.areasGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-top:16px; }
+.areaCard {
+  background:var(--bg-surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:16px;
+}
+
+.removeBtn {
+  background:none; border:1px solid var(--border); border-radius:7px;
+  color:var(--text-muted); padding:4px 8px; font-size:12px; cursor:pointer;
+  transition:all 0.15s;
+}
+.removeBtn:hover { border-color:var(--red); color:var(--red); }
+
+@media (max-width:768px) { .grid { grid-template-columns:1fr; } }

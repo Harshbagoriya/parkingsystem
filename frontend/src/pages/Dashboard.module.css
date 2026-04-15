@@ -1,0 +1,68 @@
+.page { animation: fadeUp 0.3s ease both; }
+.header { margin-bottom: 24px; }
+.title { font-size: 24px; font-family: var(--font-display); margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: var(--text-muted); }
+
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+
+.statCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent-c);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.statCard:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+
+.statTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.statLabel { font-size: 11px; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase; }
+.statIcon { font-size: 16px; color: var(--accent-c); }
+.statValue { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--accent-c); }
+
+.chartsRow { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 14px; }
+.bottomRow  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.panelHeader {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panelBody { padding: 16px 18px; }
+
+.zoneLegend { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.zoneLegend:last-child { border-bottom: none; }
+.zoneDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.zoneBar { margin-bottom: 16px; }
+.zoneBar:last-child { margin-bottom: 0; }
+.zoneBarLabel { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+
+.progressTrack { height: 5px; background: var(--bg-hover); border-radius: 10px; overflow: hidden; }
+.progressFill  { height: 100%; border-radius: 10px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.activityItem:last-child { border-bottom: none; }
+.actDot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+@media (max-width: 1100px) {
+  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+  .chartsRow, .bottomRow { grid-template-columns: 1fr; }
+}

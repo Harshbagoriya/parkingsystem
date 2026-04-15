@@ -1,0 +1,173 @@
+.page { animation: fadeUp 0.3s ease both; }
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.title    { font-size: 24px; font-family: var(--font-display); margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: var(--text-muted); }
+
+.legend { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+.loadWrap { display: flex; justify-content: center; padding: 80px 0; }
+
+.mapWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.zone {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.zoneLabel {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.slotGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot {
+  width: 64px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  border: 1px solid transparent;
+  user-select: none;
+  gap: 3px;
+}
+.slot:hover { transform: scale(1.06); }
+
+.slotId {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+.slotStatus { font-size: 10px; }
+
+.available {
+  background: rgba(0,214,143,0.1);
+  border-color: rgba(0,214,143,0.28);
+  color: var(--green);
+}
+.available:hover {
+  background: rgba(0,214,143,0.2);
+  box-shadow: 0 0 12px rgba(0,214,143,0.2);
+}
+.occupied {
+  background: rgba(255,77,109,0.1);
+  border-color: rgba(255,77,109,0.25);
+  color: var(--red);
+  cursor: not-allowed;
+}
+.occupied:hover { transform: none; }
+.reserved {
+  background: rgba(255,169,64,0.1);
+  border-color: rgba(255,169,64,0.25);
+  color: var(--amber);
+  cursor: not-allowed;
+}
+.reserved:hover { transform: none; }
+
+.slotSelected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  transform: scale(1.08);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* Booking overlay */
+.bookingOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+.bookingModal {
+  background: var(--bg-card2);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  width: 360px;
+  max-width: 95vw;
+  text-align: center;
+  animation: fadeUp 0.25s ease;
+  position: relative;
+}
+.closeBtn {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.closeBtn:hover { color: var(--text); }
+
+.slotBig {
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.vehicleInput {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  outline: none;
+  text-align: center;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+  transition: border 0.15s;
+}
+.vehicleInput:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61,158,255,0.12); }
+
+.bookBtn {
+  width: 100%;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+}
+.bookBtn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.bookBtn:disabled { opacity: 0.6; cursor: not-allowed; }
