@@ -1,63 +1,117 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
 import styles from './EntryExit.module.css'
 
-const MOCK_LOG = [
-  { _id:1, type:'entry', vehicleNumber:'RJ14 AB 1234', slotId:'B-07', time:'09:42 AM', duration:null },
-  { _id:2, type:'exit',  vehicleNumber:'RJ14 CD 5678', slotId:'A-03', time:'09:38 AM', duration:'1h 22m' },
-  { _id:3, type:'entry', vehicleNumber:'DL01 XY 7890', slotId:'C-12', time:'09:15 AM', duration:null },
-  { _id:4, type:'exit',  vehicleNumber:'MH02 AA 1111', slotId:'B-02', time:'08:55 AM', duration:'45m' },
-]
+const formatDuration = (minutes) => {
+  if (!minutes) return null
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
 
 export default function EntryExit() {
   const [entryVeh, setEntryVeh] = useState('')
   const [entrySlot, setEntrySlot] = useState('')
   const [exitVeh,  setExitVeh]  = useState('')
   const [exitInfo, setExitInfo] = useState(null)
-  const [log, setLog] = useState(MOCK_LOG)
+  const [exitLookupLoading, setExitLookupLoading] = useState(false)
+  const [log, setLog] = useState([])
+  const [logLoading, setLogLoading] = useState(true)
   const [loadingEntry, setLoadingEntry] = useState(false)
   const [loadingExit,  setLoadingExit]  = useState(false)
 
-  // Simulate lookup when exit vehicle is typed
-  useEffect(() => {
-    if (exitVeh.length > 4) {
-      setExitInfo({ slotId: 'B-07', entryTime: new Date(Date.now() - 134*60*1000), duration: '2h 14m' })
-    } else {
-      setExitInfo(null)
+  // Fetch today's real log from backend
+  const fetchLog = useCallback(async () => {
+    try {
+      const { data } = await api.get('/entry-exit/log')
+      const formatted = (data.logs || []).map(l => ({
+        _id: l._id,
+        type: l.type,
+        vehicleNumber: l.vehicleNumber,
+        slotId: l.slotId,
+        time: new Date(l.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        duration: l.durationMin ? formatDuration(l.durationMin) : null,
+      }))
+      setLog(formatted)
+    } catch {
+      // If backend unavailable, keep empty log
+    } finally {
+      setLogLoading(false)
     }
+  }, [])
+
+  useEffect(() => { fetchLog() }, [fetchLog])
+
+  // Auto-refresh log every 30 seconds to stay in sync
+  useEffect(() => {
+    const interval = setInterval(() => fetchLog(), 30000)
+    return () => clearInterval(interval)
+  }, [fetchLog])
+
+  // Real lookup when exit vehicle is typed (debounced)
+  useEffect(() => {
+    if (exitVeh.length < 4) { setExitInfo(null); return }
+    const timer = setTimeout(async () => {
+      setExitLookupLoading(true)
+      try {
+        const { data } = await api.get(`/bookings?vehicleNumber=${exitVeh.toUpperCase()}&status=active`)
+        const booking = data.bookings?.[0]
+        if (booking) {
+          const entryTime = new Date(booking.entryTime)
+          const durationMin = Math.round((Date.now() - entryTime) / 60000)
+          setExitInfo({
+            slotId: booking.slotId,
+            entryTime,
+            duration: formatDuration(durationMin),
+          })
+        } else {
+          setExitInfo(null)
+        }
+      } catch {
+        setExitInfo(null)
+      } finally {
+        setExitLookupLoading(false)
+      }
+    }, 500)
+    return () => clearTimeout(timer)
   }, [exitVeh])
 
   const recordEntry = async () => {
     if (!entryVeh.trim()) { toast.error('Enter vehicle number'); return }
     setLoadingEntry(true)
     try {
-      await api.post('/entry-exit/entry', { vehicleNumber: entryVeh.toUpperCase(), slotId: entrySlot || undefined })
-    } catch { /* demo fallback */ }
-    const slot = entrySlot || `B-0${Math.floor(Math.random()*5+1)}`
-    setLog(prev => [{
-      _id: Date.now(), type:'entry', vehicleNumber: entryVeh.toUpperCase(),
-      slotId: slot, time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), duration:null
-    }, ...prev])
-    toast.success(`✅ Entry recorded — ${entryVeh.toUpperCase()} → Slot ${slot}`)
-    setEntryVeh(''); setEntrySlot('')
-    setLoadingEntry(false)
+      const { data } = await api.post('/entry-exit/entry', {
+        vehicleNumber: entryVeh.toUpperCase(),
+        slotId: entrySlot || undefined,
+      })
+      toast.success(`✅ Entry recorded — ${entryVeh.toUpperCase()} → Slot ${data.slotId}`)
+      setEntryVeh(''); setEntrySlot('')
+      await fetchLog() // refresh real log
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to record entry')
+    } finally {
+      setLoadingEntry(false)
+    }
   }
 
   const recordExit = async () => {
     if (!exitVeh.trim()) { toast.error('Enter vehicle number'); return }
     setLoadingExit(true)
     try {
-      await api.post('/entry-exit/exit', { vehicleNumber: exitVeh.toUpperCase() })
-    } catch { /* demo fallback */ }
-    setLog(prev => [{
-      _id: Date.now(), type:'exit', vehicleNumber: exitVeh.toUpperCase(),
-      slotId: exitInfo?.slotId || '—', time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-      duration: exitInfo?.duration || '—'
-    }, ...prev])
-    toast.success(`🚪 Exit recorded — Slot ${exitInfo?.slotId || '—'} is now available`)
-    setExitVeh(''); setExitInfo(null)
-    setLoadingExit(false)
+      const { data } = await api.post('/entry-exit/exit', {
+        vehicleNumber: exitVeh.toUpperCase(),
+      })
+      toast.success(`🚪 Exit recorded — Slot ${data.slotId} is now available`)
+      setExitVeh('')
+      setExitInfo(null)
+      // Small delay to let MongoDB write propagate before re-fetching log
+      setTimeout(() => fetchLog(), 500)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to record exit')
+    } finally {
+      setLoadingExit(false)
+    }
   }
 
   return (
@@ -115,7 +169,7 @@ export default function EntryExit() {
               </div>
             )}
             {!exitInfo && <div style={{ height:72, background:'var(--bg-base)', borderRadius:8, border:'1px dashed var(--border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <span style={{ fontSize:12, color:'var(--text-subtle)' }}>Enter plate to look up parking info</span>
+              <span style={{ fontSize:12, color:'var(--text-subtle)' }}>{exitLookupLoading ? '🔍 Looking up...' : 'Enter plate to look up parking info'}</span>
             </div>}
             <button className={`${styles.gateBtn} ${styles.exitBtn}`} onClick={recordExit} disabled={loadingExit}>
               {loadingExit ? '⏳ Recording...' : '🚪 Record Exit & Free Slot'}
@@ -131,6 +185,8 @@ export default function EntryExit() {
           <span style={{ fontSize:11, color:'var(--text-muted)' }}>{log.length} events</span>
         </div>
         <div className={styles.logBody}>
+          {logLoading && <div style={{ padding:'16px', textAlign:'center', fontSize:12, color:'var(--text-muted)' }}>Loading log...</div>}
+          {!logLoading && log.length === 0 && <div style={{ padding:'16px', textAlign:'center', fontSize:12, color:'var(--text-muted)' }}>No events recorded today</div>}
           {log.map(entry => (
             <div key={entry._id} className={styles.logRow}>
               <div className={`${styles.logDot} ${entry.type==='entry' ? styles.dotEntry : styles.dotExit}`} />
