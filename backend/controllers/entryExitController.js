@@ -77,11 +77,12 @@ exports.recordExit = async (req, res) => {
       status: 'active',
     })
 
-    const slotId = booking?.slotId
+    // Also try to find via slot directly (handles walk-ins or booking-less entries)
+    const slotByVehicle = await ParkingSlot.findOne({ currentVehicle: vehicleNumber.toUpperCase() })
+
+    const slotId = booking?.slotId || slotByVehicle?.slotId
     if (!slotId) {
-      // Try to find via slot
-      const slot = await ParkingSlot.findOne({ currentVehicle: vehicleNumber.toUpperCase() })
-      if (!slot) return res.status(404).json({ message: 'No active session found for this vehicle' })
+      return res.status(404).json({ message: 'No active session found for this vehicle' })
     }
 
     const exitTime = new Date()
@@ -95,7 +96,7 @@ exports.recordExit = async (req, res) => {
     }
 
     // Free the slot
-    const resolvedSlotId = slotId || (await ParkingSlot.findOne({ currentVehicle: vehicleNumber.toUpperCase() }))?.slotId
+    const resolvedSlotId = slotId
     await ParkingSlot.findOneAndUpdate(
       { slotId: resolvedSlotId },
       { status: 'available', currentVehicle: null, currentBooking: null }
