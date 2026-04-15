@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import styles from './AuthPage.module.css'
-import brandingImg from '../pages/parking.jpg'
+import brandingImg from '../pages/Parking.jpg'
 import { useGoogleLogin } from '@react-oauth/google'
 
 export default function LoginPage() {
