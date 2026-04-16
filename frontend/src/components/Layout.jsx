@@ -5,14 +5,14 @@ import styles from './Layout.module.css'
 
 const NAV_USER = [
   { to: '/dashboard',   icon: '⬡', label: 'Dashboard' },
-  { to: '/parking-map', icon: '⊞', label: 'Parking Map' },
-  { to: '/book',        icon: '＋', label: 'Book Slot' },
-  { to: '/my-bookings', icon: '≡', label: 'My Bookings' },
+  { to: '/parking-map', icon: '⊞', label: 'Map' },
+  { to: '/book',        icon: '＋', label: 'Book' },
+  { to: '/my-bookings', icon: '≡', label: 'Bookings' },
 ]
 const NAV_ADMIN = [
-  { to: '/entry-exit',   icon: '⟷', label: 'Entry / Exit' },
+  { to: '/entry-exit',   icon: '⟷', label: 'Entry/Exit' },
   { to: '/admin/users',  icon: '◎', label: 'Users' },
-  { to: '/admin/slots',  icon: '⚙', label: 'Manage Slots' },
+  { to: '/admin/slots',  icon: '⚙', label: 'Slots' },
 ]
 
 export default function Layout() {
@@ -22,9 +22,14 @@ export default function Layout() {
 
   const handleLogout = () => { logout(); navigate('/login') }
 
+  const allMobileNav = [
+    ...NAV_USER,
+    ...(user?.role === 'admin' ? NAV_ADMIN : []),
+  ]
+
   return (
     <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`}>
-      {/* Sidebar */}
+      {/* ── Desktop Sidebar ── */}
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <div className={styles.logoMark}>CPU</div>
@@ -71,18 +76,40 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main area ── */}
       <main className={styles.main}>
         <header className={styles.topbar}>
+          {/* Desktop: collapse button */}
           <button className={styles.collapseBtn} onClick={() => setCollapsed(c => !c)}>
             {collapsed ? '›' : '‹'}
           </button>
-         
+
+          {/* Mobile: centered logo */}
+          <div className={styles.mobileLogo}>
+            <div className={styles.mobileLogoMark}>CPU</div>
+            <span className={styles.mobileLogoText}>Parking</span>
+          </div>
+
+          {/* Mobile: logout button */}
+          <button className={styles.mobileLogout} onClick={handleLogout} title="Logout">⏻</button>
         </header>
+
         <div className={styles.content}>
           <Outlet />
         </div>
       </main>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav className={styles.mobileNav}>
+        {allMobileNav.map(n => (
+          <NavLink key={n.to} to={n.to} className={({ isActive }) =>
+            `${styles.mobileNavItem} ${isActive ? styles.active : ''}`
+          }>
+            <span className={styles.mobileNavIcon}>{n.icon}</span>
+            <span className={styles.mobileNavLabel}>{n.label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
