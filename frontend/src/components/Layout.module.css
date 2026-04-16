@@ -5,7 +5,7 @@
   background: var(--bg-base);
 }
 
-/* Sidebar */
+/* ── Sidebar (desktop only) ─────────────────────────────────── */
 .sidebar {
   width: 220px;
   min-width: 220px;
@@ -149,12 +149,13 @@
 }
 .logoutBtn:hover { border-color: var(--red); color: var(--red); }
 
-/* Main */
+/* ── Main ───────────────────────────────────────────────────── */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .topbar {
@@ -166,6 +167,7 @@
   justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .collapseBtn {
@@ -185,24 +187,132 @@
 
 .topbarRight { display: flex; align-items: center; gap: 12px; }
 
-.liveIndicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.liveDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 2s ease infinite;
-}
-
 .content {
   flex: 1;
   overflow-y: auto;
   padding: 28px 28px;
   scroll-behavior: smooth;
+}
+
+/* Mobile elements hidden on desktop */
+.mobileNav { display: none; }
+.mobileLogo { display: none; }
+.mobileLogout { display: none; }
+
+/* ── Mobile (≤ 768px) ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Hide desktop sidebar */
+  .sidebar { display: none; }
+
+  /* Hide desktop collapse button */
+  .collapseBtn { display: none; }
+
+  /* Topbar becomes a mobile header */
+  .topbar {
+    padding: 0 16px;
+    justify-content: center;
+  }
+
+  /* Show mobile logo in center */
+  .mobileLogo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobileLogoMark {
+    width: 52px;
+    height: 26px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 13px;
+    color: #fff;
+  }
+  .mobileLogoText {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 15px;
+    background: linear-gradient(135deg, #fff 30%, var(--accent));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Logout button on right of mobile topbar */
+  .mobileLogout {
+    display: flex;
+    position: absolute;
+    right: 16px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* Tighter content padding, leave room for bottom nav */
+  .content {
+    padding: 16px 14px 80px;
+  }
+
+  /* Bottom navigation bar */
+  .mobileNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    align-items: stretch;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mobileNavItem {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--text-subtle);
+    font-size: 10px;
+    font-weight: 500;
+    border-radius: 10px;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+    padding: 6px 2px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobileNavItem:active {
+    background: var(--bg-hover);
+    transform: scale(0.93);
+  }
+  .mobileNavItem.active {
+    color: var(--accent);
+  }
+  .mobileNavIcon {
+    font-size: 19px;
+    line-height: 1;
+  }
+  .mobileNavLabel {
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 52px;
+    text-align: center;
+  }
 }
