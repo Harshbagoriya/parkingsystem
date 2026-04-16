@@ -1,9 +1,17 @@
 .page { animation: fadeUp 0.3s ease both; }
-.header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:14px; }
-.title    { font-size:24px; font-family:var(--font-display); margin-bottom:4px; }
-.subtitle { font-size:13px; color:var(--text-muted); }
 
-.filterRow { display:flex; gap:6px; flex-wrap:wrap; }
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.title    { font-size: 24px; font-family: var(--font-display); margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: var(--text-muted); }
+
+.filterRow { display: flex; gap: 6px; flex-wrap: wrap; }
 .filterBtn {
   padding: 7px 14px;
   border-radius: 20px;
@@ -14,44 +22,46 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .filterBtn:hover { border-color: var(--border-strong); color: var(--text); }
 .filterActive { border-color: var(--accent) !important; color: var(--accent) !important; background: var(--accent-glow) !important; }
 
-.bookingList { display:flex; flex-direction:column; gap:10px; }
+.bookingList { display: flex; flex-direction: column; gap: 10px; }
 
 .bookingCard {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px 24px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   transition: transform 0.12s, border-color 0.12s;
 }
 .bookingCard:hover { transform: translateX(4px); border-color: var(--border-md); }
 
-.cardLeft { flex-shrink:0; }
+.cardLeft { flex-shrink: 0; }
 .slotBadge {
-  width: 64px; height: 64px;
+  width: 60px; height: 60px;
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   border: 1px solid var(--border-md);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
-.cardMid { flex:1; }
-.cardRight { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+.cardMid { flex: 1; min-width: 0; }
+.cardRight { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
 
 .statusBadge {
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .cancelBtn {
@@ -63,6 +73,7 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .cancelBtn:hover { border-color: var(--red); color: var(--red); }
 
@@ -73,3 +84,62 @@
 }
 .empty h3 { font-size: 18px; margin-bottom: 8px; font-family: var(--font-display); }
 .empty p  { font-size: 13px; }
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .title { font-size: 20px; }
+
+  /* Scrollable horizontal filter row */
+  .filterRow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+  .filterRow::-webkit-scrollbar { display: none; }
+  .filterBtn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+  }
+
+  /* Booking cards stack better on small screens */
+  .bookingCard {
+    padding: 14px 14px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .bookingCard:hover { transform: none; }
+
+  .slotBadge {
+    width: 48px;
+    height: 48px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  /* Status + cancel goes below vehicle info on very small screens */
+  .cardRight {
+    align-items: flex-end;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .bookingCard {
+    flex-wrap: wrap;
+  }
+  .cardRight {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
