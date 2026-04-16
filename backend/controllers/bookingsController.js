@@ -21,13 +21,16 @@ exports.createBooking = async (req, res) => {
 
     let slot
     if (preferredSlot) {
+      // Book the exact slot requested
       slot = await ParkingSlot.findOne({ slotId: preferredSlot.toUpperCase(), status: 'available' })
       if (!slot) return res.status(409).json({ message: `Slot ${preferredSlot} is not available` })
     } else {
-      // Auto-assign: find first available slot in matching zone
-      const zone = CATEGORY_ZONE[category] || 'Student Car'
-      slot = await ParkingSlot.findOne({ zone, status: 'available' })
-      if (!slot) return res.status(409).json({ message: 'No slots available in this zone' })
+      // Auto-assign: find first available slot in the correct zone for this category
+      const zone = CATEGORY_ZONE[category]
+      if (!zone) return res.status(400).json({ message: `Invalid category: ${category}. Use student_bike, student_car, or faculty` })
+      slot = await ParkingSlot.findOne({ category, status: 'available' })
+        || await ParkingSlot.findOne({ zone, status: 'available' })
+      if (!slot) return res.status(409).json({ message: `No slots available in ${zone} zone` })
     }
 
     // Reserve the slot
