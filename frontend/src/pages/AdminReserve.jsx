@@ -347,23 +347,33 @@ export default function AdminReserve() {
               )}
               {filtered.map(r => {
                 const st = STATUS_STYLE[r.status] || STATUS_STYLE.completed
-                // Parse holder info from adminNotes
-                const holderLine = r.adminNotes
-                  ? r.adminNotes.replace(/^Admin reserved by .+?\. Holder: /, '').split(' | ')[0]
-                  : r.user?.name || '—'
+                // Use direct fields stored in schema
+                const displayName = r.holderName || r.user?.name || '—'
+                const displayRole = r.holderRole || r.user?.role || ''
 
                 return (
                   <div key={r._id} className={styles.reservationCard}>
                     <div className={styles.resSlotBadge}>{r.slotId}</div>
                     <div className={styles.resInfo}>
-                      <div className={styles.resName}>{holderLine}</div>
+                      <div className={styles.resName}>
+                        {displayName}
+                        {displayRole && <span className={styles.resRolePill}>{displayRole}</span>}
+                      </div>
                       <div className={styles.resMeta}>
                         <span className={styles.resVehicle}>{r.vehicleNumber}</span>
+                        <span className={styles.resDot}>·</span>
+                        <span>{r.vehicleType}</span>
                         <span className={styles.resDot}>·</span>
                         <span>{r.category?.replace('_', ' ')}</span>
                         <span className={styles.resDot}>·</span>
                         <span className={styles.resId}>#{r.bookingId}</span>
                       </div>
+                      {(r.holderEmail || r.holderMobile) && (
+                        <div className={styles.resContact}>
+                          {r.holderEmail && <span>✉ {r.holderEmail}</span>}
+                          {r.holderMobile && <span>📞 {r.holderMobile}</span>}
+                        </div>
+                      )}
                       {r.expiresAt && r.status === 'reserved' && (
                         <div className={styles.resExpiry}>
                           Expires: {new Date(r.expiresAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
@@ -371,7 +381,7 @@ export default function AdminReserve() {
                       )}
                       {r.adminNotes && (
                         <div className={styles.resNotes} title={r.adminNotes}>
-                          {r.adminNotes.length > 80 ? r.adminNotes.slice(0, 80) + '…' : r.adminNotes}
+                          📝 {r.adminNotes.length > 80 ? r.adminNotes.slice(0, 80) + '…' : r.adminNotes}
                         </div>
                       )}
                     </div>
