@@ -1,5 +1,6 @@
 const Booking     = require('../models/Booking')
 const ParkingSlot = require('../models/ParkingSlot')
+const User        = require('../models/User')
 
 const CATEGORY_ZONE = {
   student_bike: 'Student Bike',
@@ -7,7 +8,7 @@ const CATEGORY_ZONE = {
   faculty:      'Faculty',
 }
 
-// POST /api/bookings — create new booking
+// POST /api/bookings — create new booking (student/faculty self-booking)
 exports.createBooking = async (req, res) => {
   try {
     const { vehicleNumber, vehicleType, category, preferredSlot } = req.body
@@ -21,36 +22,33 @@ exports.createBooking = async (req, res) => {
 
     let slot
     if (preferredSlot) {
-      // Book the exact slot requested
       slot = await ParkingSlot.findOne({ slotId: preferredSlot.toUpperCase(), status: 'available' })
       if (!slot) return res.status(409).json({ message: `Slot ${preferredSlot} is not available` })
     } else {
-      // Auto-assign: find first available slot in the correct zone for this category
       const zone = CATEGORY_ZONE[category]
-      if (!zone) return res.status(400).json({ message: `Invalid category: ${category}. Use student_bike, student_car, or faculty` })
+      if (!zone) return res.status(400).json({ message: `Invalid category: ${category}` })
       slot = await ParkingSlot.findOne({ category, status: 'available' })
-        || await ParkingSlot.findOne({ zone, status: 'available' })
+          || await ParkingSlot.findOne({ zone, status: 'available' })
       if (!slot) return res.status(409).json({ message: `No slots available in ${zone} zone` })
     }
 
-    // Reserve the slot
     slot.status = 'reserved'
     await slot.save()
 
-    // Create booking (expires in 45 min)
     const expiresAt = new Date(Date.now() + 45 * 60 * 1000)
     const booking = await Booking.create({
-      user: req.user._id, slotId: slot.slotId,
-      vehicleNumber: vehicleNumber.toUpperCase(), vehicleType, category,
+      user: req.user._id,
+      slotId: slot.slotId,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      vehicleType, category,
       expiresAt, status: 'reserved',
     })
 
     slot.currentBooking = booking._id
     await slot.save()
 
-    // Emit real-time event
-    req.io.emit('slot:updated',  { slotId: slot.slotId, status: 'reserved' })
-    req.io.emit('booking:new',   { bookingId: booking.bookingId })
+    req.io.emit('slot:updated', { slotId: slot.slotId, status: 'reserved' })
+    req.io.emit('booking:new',  { bookingId: booking.bookingId })
 
     res.status(201).json({ booking })
   } catch (err) {
@@ -58,7 +56,7 @@ exports.createBooking = async (req, res) => {
   }
 }
 
-// GET /api/bookings/my — current user's bookings
+// GET /api/bookings/my
 exports.getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id }).sort('-createdAt').limit(50)
@@ -68,7 +66,7 @@ exports.getMyBookings = async (req, res) => {
   }
 }
 
-// GET /api/bookings/recent — admin: recent bookings
+// GET /api/bookings/recent — admin
 exports.getRecentBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
@@ -80,11 +78,12 @@ exports.getRecentBookings = async (req, res) => {
   }
 }
 
-// GET /api/bookings — admin: all bookings with filter
+// GET /api/bookings — admin: all bookings
 exports.getAllBookings = async (req, res) => {
   try {
     const filter = {}
-    if (req.query.status) filter.status = req.query.status
+    if (req.query.status)        filter.status        = req.query.status
+    if (req.query.vehicleNumber) filter.vehicleNumber = req.query.vehicleNumber.toUpperCase()
     const bookings = await Booking.find(filter)
       .sort('-createdAt').limit(100)
       .populate('user', 'name email')
@@ -94,13 +93,12 @@ exports.getAllBookings = async (req, res) => {
   }
 }
 
-// DELETE /api/bookings/:id — cancel booking
+// DELETE /api/bookings/:id — cancel
 exports.cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
     if (!booking) return res.status(404).json({ message: 'Booking not found' })
 
-    // Only owner or admin can cancel
     if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorised' })
     }
@@ -111,7 +109,6 @@ exports.cancelBooking = async (req, res) => {
     booking.status = 'cancelled'
     await booking.save()
 
-    // Free the slot
     await ParkingSlot.findOneAndUpdate(
       { slotId: booking.slotId },
       { status: 'available', currentBooking: null, currentVehicle: null }
@@ -124,7 +121,7 @@ exports.cancelBooking = async (req, res) => {
   }
 }
 
-// POST /api/bookings/admin-reserve — admin reserves a slot for any person
+// POST /api/bookings/admin-reserve — admin reserves for any person
 exports.adminReserve = async (req, res) => {
   try {
     const {
@@ -132,85 +129,115 @@ exports.adminReserve = async (req, res) => {
       vehicleNumber, vehicleType, category, preferredSlot, notes
     } = req.body
 
-    if (!holderName || !vehicleNumber || !vehicleType || !category) {
-      return res.status(400).json({ message: 'Name, vehicle number, vehicle type and category are required' })
+    // Validate required fields
+    if (!holderName || !holderName.trim()) {
+      return res.status(400).json({ message: 'Holder name is required' })
+    }
+    if (!vehicleNumber || !vehicleNumber.trim()) {
+      return res.status(400).json({ message: 'Vehicle number is required' })
+    }
+    if (!vehicleType) {
+      return res.status(400).json({ message: 'Vehicle type is required' })
+    }
+    if (!category || !CATEGORY_ZONE[category]) {
+      return res.status(400).json({ message: 'Valid category is required (student_bike, student_car, faculty)' })
     }
 
-    // Find or resolve the user by email if provided
-    let userId = req.user._id  // default: admin owns it
-    if (holderEmail) {
-      const User = require('../models/User')
-      const found = await User.findOne({ email: holderEmail.toLowerCase() })
-      if (found) userId = found._id
-    }
+    const vNum = vehicleNumber.toUpperCase().trim()
 
-    // Check if this vehicle already has an active booking
+    // Check if vehicle already has active booking
     const existing = await Booking.findOne({
-      vehicleNumber: vehicleNumber.toUpperCase(),
+      vehicleNumber: vNum,
       status: { $in: ['reserved', 'active'] }
     })
     if (existing) {
-      return res.status(409).json({ message: `Vehicle ${vehicleNumber.toUpperCase()} already has an active booking (${existing.bookingId})` })
+      return res.status(409).json({
+        message: `Vehicle ${vNum} already has an active booking (${existing.bookingId}). Cancel it first.`
+      })
     }
 
     // Find the slot
     let slot
-    if (preferredSlot) {
-      slot = await ParkingSlot.findOne({ slotId: preferredSlot.toUpperCase(), status: 'available' })
-      if (!slot) return res.status(409).json({ message: `Slot ${preferredSlot.toUpperCase()} is not available` })
+    if (preferredSlot && preferredSlot.trim()) {
+      slot = await ParkingSlot.findOne({
+        slotId: preferredSlot.toUpperCase().trim(),
+        status: 'available'
+      })
+      if (!slot) {
+        return res.status(409).json({
+          message: `Slot ${preferredSlot.toUpperCase()} is not available. Choose a different slot.`
+        })
+      }
     } else {
-      const CATEGORY_ZONE = { student_bike: 'Student Bike', student_car: 'Student Car', faculty: 'Faculty' }
+      // Auto-assign from correct zone
       const zone = CATEGORY_ZONE[category]
-      if (!zone) return res.status(400).json({ message: `Invalid category: ${category}` })
       slot = await ParkingSlot.findOne({ category, status: 'available' })
-              || await ParkingSlot.findOne({ zone, status: 'available' })
-      if (!slot) return res.status(409).json({ message: `No slots available in ${zone} zone` })
+          || await ParkingSlot.findOne({ zone,     status: 'available' })
+      if (!slot) {
+        return res.status(409).json({
+          message: `No available slots in ${CATEGORY_ZONE[category]} zone`
+        })
+      }
     }
 
-    // Reserve the slot
+    // Find user account by email (optional linkage)
+    let userId = req.user._id  // admin as fallback owner
+    if (holderEmail && holderEmail.trim()) {
+      const found = await User.findOne({ email: holderEmail.toLowerCase().trim() })
+      if (found) userId = found._id
+    }
+
+    // Reserve slot
     slot.status = 'reserved'
     await slot.save()
 
-    // Create booking — expires in 24h for admin reservations
+    // Create booking — 24h expiry for admin reservations
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
     const booking = await Booking.create({
-      user: userId,
-      slotId: slot.slotId,
-      vehicleNumber: vehicleNumber.toUpperCase(),
-      vehicleType, category,
-      expiresAt, status: 'reserved',
+      user:            userId,
+      slotId:          slot.slotId,
+      vehicleNumber:   vNum,
+      vehicleType,
+      category,
+      expiresAt,
+      status:          'reserved',
       isAdminReserved: true,
-      holderName:   holderName.trim(),
-      holderEmail:  holderEmail ? holderEmail.trim() : null,
-      holderMobile: holderMobile ? holderMobile.trim() : null,
-      holderRole:   holderRole || 'student',
-      adminNotes:   notes ? notes.trim() : null,
+      holderName:      holderName.trim(),
+      holderEmail:     holderEmail ? holderEmail.trim() : null,
+      holderMobile:    holderMobile ? holderMobile.trim() : null,
+      holderRole:      holderRole || 'student',
+      adminNotes:      notes ? notes.trim() : null,
     })
 
     slot.currentBooking = booking._id
     await slot.save()
 
     req.io.emit('slot:updated', { slotId: slot.slotId, status: 'reserved' })
-    req.io.emit('booking:new', { bookingId: booking.bookingId })
+    req.io.emit('booking:new',  { bookingId: booking.bookingId })
 
     res.status(201).json({
       booking,
-      holderName, holderEmail, holderMobile, holderRole,
-      notes,
-      message: `Slot ${slot.slotId} reserved for ${holderName}`
+      holderName:   holderName.trim(),
+      holderEmail:  holderEmail || null,
+      holderMobile: holderMobile || null,
+      holderRole:   holderRole || 'student',
+      notes:        notes || null,
+      message:      `Slot ${slot.slotId} reserved for ${holderName.trim()}`
     })
   } catch (err) {
+    console.error('[adminReserve error]', err)
     res.status(500).json({ message: err.message })
   }
 }
 
-// GET /api/bookings/admin-reserve — admin get all admin-reserved bookings
+// GET /api/bookings/admin-reserve — all bookings for admin panel
 exports.getAdminReservations = async (req, res) => {
   try {
     const filter = {}
     if (req.query.status) filter.status = req.query.status
     const bookings = await Booking.find(filter)
-      .sort('-createdAt').limit(200)
+      .sort('-createdAt')
+      .limit(200)
       .populate('user', 'name email mobile role')
     res.json({ bookings })
   } catch (err) {
