@@ -207,7 +207,7 @@ exports.adminReserve = async (req, res) => {
 // GET /api/bookings/admin-reserve — admin get all admin-reserved bookings
 exports.getAdminReservations = async (req, res) => {
   try {
-    const filter = { isAdminReserved: true }
+    const filter = {}
     if (req.query.status) filter.status = req.query.status
     const bookings = await Booking.find(filter)
       .sort('-createdAt').limit(200)
