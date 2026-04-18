@@ -11,6 +11,13 @@ const bookingSchema = new mongoose.Schema({
   entryTime:     { type: Date, default: null },
   exitTime:      { type: Date, default: null },
   expiresAt:     { type: Date },
+  // Admin reservation fields
+  adminNotes:    { type: String, default: null },
+  holderName:    { type: String, default: null },
+  holderEmail:   { type: String, default: null },
+  holderMobile:  { type: String, default: null },
+  holderRole:    { type: String, default: null },
+  isAdminReserved: { type: Boolean, default: false },
 }, { timestamps: true })
 
 // Auto-generate bookingId
