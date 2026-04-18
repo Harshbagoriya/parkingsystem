@@ -2,6 +2,8 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "buildCommand": "npm install --include=optional && npm run build",
-  "framework": "vite"
+  "installCommand": "npm install --ignore-scripts=false --include=optional --no-workspaces",
+  "buildCommand": "npx vite build",
+  "framework": "vite",
+  "outputDirectory": "dist"
 }
