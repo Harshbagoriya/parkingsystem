@@ -261,3 +261,24 @@
   .row2 { grid-template-columns: 1fr; }
   .catGrid { grid-template-columns: repeat(3, 1fr); }
 }
+
+.resRolePill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid rgba(61,158,255,0.2);
+  vertical-align: middle;
+}
+.resContact {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  margin-top: 3px;
+}
