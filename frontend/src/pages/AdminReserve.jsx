@@ -10,14 +10,14 @@ const CATEGORIES = [
 ]
 const VEHICLE_TYPES = {
   student_bike: [{ value: 'bike', label: 'Motorcycle / Bike' }, { value: 'scooter', label: 'Scooter' }],
-  student_car:  [{ value: 'car',  label: 'Car' },               { value: 'suv',     label: 'SUV / Jeep' }],
-  faculty:      [{ value: 'car',  label: 'Car' },               { value: 'suv',     label: 'SUV / Jeep' }, { value: 'bike', label: 'Bike' }],
+  student_car:  [{ value: 'car',  label: 'Car' }, { value: 'suv', label: 'SUV / Jeep' }],
+  faculty:      [{ value: 'car',  label: 'Car' }, { value: 'suv', label: 'SUV / Jeep' }, { value: 'bike', label: 'Bike' }],
 }
 const STATUS_STYLE = {
-  reserved:  { label: 'Reserved',  color: 'var(--amber)', bg: 'var(--amber-glow)' },
-  active:    { label: 'Active',    color: 'var(--green)', bg: 'var(--green-glow)' },
-  completed: { label: 'Completed', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.04)' },
-  cancelled: { label: 'Cancelled', color: 'var(--red)',   bg: 'var(--red-glow)' },
+  reserved:  { label: 'Reserved',  color: 'var(--amber)',     bg: 'var(--amber-glow)' },
+  active:    { label: 'Active',    color: 'var(--green)',     bg: 'var(--green-glow)' },
+  completed: { label: 'Completed', color: 'var(--text-muted)',bg: 'rgba(255,255,255,0.04)' },
+  cancelled: { label: 'Cancelled', color: 'var(--red)',       bg: 'var(--red-glow)' },
 }
 
 const EMPTY_FORM = {
@@ -27,31 +27,34 @@ const EMPTY_FORM = {
 }
 
 export default function AdminReserve() {
-  const [form, setForm]         = useState(EMPTY_FORM)
-  const [loading, setLoading]   = useState(false)
-  const [confirmed, setConfirmed] = useState(null)
+  const [form, setForm]             = useState(EMPTY_FORM)
+  const [loading, setLoading]       = useState(false)
+  const [confirmed, setConfirmed]   = useState(null)
   const [reservations, setReservations] = useState([])
   const [listLoading, setListLoading]   = useState(true)
   const [filterStatus, setFilterStatus] = useState('all')
   const [availableSlots, setAvailableSlots] = useState([])
-  const [slotSearch, setSlotSearch] = useState('')
+  const [slotInput, setSlotInput]   = useState('')   // separate state — no conflict with form.preferredSlot
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
-  const setCategory = key => setForm(f => ({ ...f, category: key, vehicleType: '', preferredSlot: '' }))
 
-  // Fetch all admin reservations
+  const setCategory = key => {
+    setForm(f => ({ ...f, category: key, vehicleType: '', preferredSlot: '' }))
+    setSlotInput('')
+  }
+
   const fetchReservations = useCallback(async () => {
     try {
       const { data } = await api.get('/bookings/admin-reserve')
       setReservations(data.bookings || [])
-    } catch {
+    } catch (err) {
+      console.error('fetchReservations error:', err)
       setReservations([])
     } finally {
       setListLoading(false)
     }
   }, [])
 
-  // Fetch available slots for selected category
   const fetchAvailableSlots = useCallback(async (category) => {
     try {
       const { data } = await api.get(`/slots?category=${category}&status=available`)
@@ -64,32 +67,54 @@ export default function AdminReserve() {
   useEffect(() => { fetchReservations() }, [fetchReservations])
   useEffect(() => { fetchAvailableSlots(form.category) }, [form.category, fetchAvailableSlots])
 
+  const selectSlot = (slotId) => {
+    setForm(f => ({ ...f, preferredSlot: slotId }))
+    setSlotInput(slotId)
+  }
+
+  const clearSlot = () => {
+    setForm(f => ({ ...f, preferredSlot: '' }))
+    setSlotInput('')
+  }
+
+  const handleSlotInputChange = (e) => {
+    const val = e.target.value.toUpperCase()
+    setSlotInput(val)
+    setForm(f => ({ ...f, preferredSlot: val }))
+  }
+
   const handleSubmit = async e => {
     e.preventDefault()
-    if (!form.holderName || !form.vehicleNumber || !form.vehicleType) {
-      toast.error('Name, vehicle number and vehicle type are required')
-      return
-    }
+
+    if (!form.holderName.trim()) { toast.error('Holder name is required'); return }
+    if (!form.vehicleNumber.trim()) { toast.error('Vehicle number is required'); return }
+    if (!form.vehicleType) { toast.error('Select a vehicle type'); return }
+
     setLoading(true)
     try {
-      const { data } = await api.post('/bookings/admin-reserve', {
+      const payload = {
         holderName:    form.holderName.trim(),
-        holderEmail:   form.holderEmail.trim() || undefined,
-        holderMobile:  form.holderMobile.trim() || undefined,
         holderRole:    form.holderRole,
-        vehicleNumber: form.vehicleNumber.toUpperCase(),
+        vehicleNumber: form.vehicleNumber.toUpperCase().trim(),
         vehicleType:   form.vehicleType,
         category:      form.category,
-        preferredSlot: form.preferredSlot.toUpperCase() || undefined,
-        notes:         form.notes.trim() || undefined,
-      })
+      }
+      if (form.holderEmail.trim())  payload.holderEmail  = form.holderEmail.trim()
+      if (form.holderMobile.trim()) payload.holderMobile = form.holderMobile.trim()
+      if (form.preferredSlot.trim()) payload.preferredSlot = form.preferredSlot.toUpperCase().trim()
+      if (form.notes.trim())        payload.notes        = form.notes.trim()
+
+      const { data } = await api.post('/bookings/admin-reserve', payload)
+
       setConfirmed(data)
       toast.success(`✅ Slot ${data.booking.slotId} reserved for ${data.holderName}`)
       setForm(EMPTY_FORM)
+      setSlotInput('')
       fetchReservations()
-      fetchAvailableSlots(EMPTY_FORM.category)
+      fetchAvailableSlots('student_bike')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Reservation failed')
+      const msg = err.response?.data?.message || 'Reservation failed'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -110,10 +135,10 @@ export default function AdminReserve() {
     ? reservations
     : reservations.filter(r => r.status === filterStatus)
 
-  const selectedCat = CATEGORIES.find(c => c.key === form.category)
-  const filteredSlots = availableSlots.filter(s =>
-    !slotSearch || s.slotId.includes(slotSearch.toUpperCase())
-  )
+  const selectedCat  = CATEGORIES.find(c => c.key === form.category)
+  const visibleSlots = slotInput
+    ? availableSlots.filter(s => s.slotId.includes(slotInput))
+    : availableSlots
 
   return (
     <div className={styles.page}>
@@ -125,7 +150,7 @@ export default function AdminReserve() {
       </div>
 
       <div className={styles.layout}>
-        {/* ── Left: Reservation Form ── */}
+        {/* ── Form ── */}
         <div className={styles.formSection}>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>
@@ -150,18 +175,13 @@ export default function AdminReserve() {
             )}
 
             <form onSubmit={handleSubmit} className={styles.form}>
-              {/* Holder info */}
               <div className={styles.sectionLabel}>👤 Holder Details</div>
 
               <div className={styles.row2}>
                 <div className={styles.field}>
                   <label>Full Name *</label>
-                  <input
-                    required
-                    placeholder="e.g. Rahul Sharma"
-                    value={form.holderName}
-                    onChange={set('holderName')}
-                  />
+                  <input required placeholder="e.g. Rahul Sharma"
+                    value={form.holderName} onChange={set('holderName')} />
                 </div>
                 <div className={styles.field}>
                   <label>Role</label>
@@ -178,39 +198,26 @@ export default function AdminReserve() {
               <div className={styles.row2}>
                 <div className={styles.field}>
                   <label>Email <span className={styles.optional}>(optional)</span></label>
-                  <input
-                    type="email"
-                    placeholder="rahul@cpu.edu.in"
-                    value={form.holderEmail}
-                    onChange={set('holderEmail')}
-                  />
+                  <input type="email" placeholder="rahul@cpu.edu.in"
+                    value={form.holderEmail} onChange={set('holderEmail')} />
                 </div>
                 <div className={styles.field}>
                   <label>Mobile <span className={styles.optional}>(optional)</span></label>
-                  <input
-                    type="tel"
-                    placeholder="98XXXXXXXX"
-                    value={form.holderMobile}
-                    onChange={set('holderMobile')}
-                    maxLength={10}
-                  />
+                  <input type="tel" placeholder="98XXXXXXXX" maxLength={10}
+                    value={form.holderMobile} onChange={set('holderMobile')} />
                 </div>
               </div>
 
               <div className={styles.divider} />
-
-              {/* Vehicle info */}
               <div className={styles.sectionLabel}>🚗 Vehicle Details</div>
 
               <div className={styles.field}>
                 <label>Parking Category *</label>
                 <div className={styles.catGrid}>
                   {CATEGORIES.map(c => (
-                    <div
-                      key={c.key}
+                    <div key={c.key}
                       className={`${styles.catCard} ${form.category === c.key ? styles.catActive : ''}`}
-                      onClick={() => setCategory(c.key)}
-                    >
+                      onClick={() => setCategory(c.key)}>
                       <span className={styles.catIcon}>{c.icon}</span>
                       <span className={styles.catLabel}>{c.label}</span>
                       <span className={styles.catZone}>Zone {c.zone}</span>
@@ -222,13 +229,9 @@ export default function AdminReserve() {
               <div className={styles.row2}>
                 <div className={styles.field}>
                   <label>Vehicle Number *</label>
-                  <input
-                    required
-                    placeholder="RJ14AB1234"
-                    value={form.vehicleNumber}
-                    onChange={set('vehicleNumber')}
-                    style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '1px' }}
-                  />
+                  <input required placeholder="RJ14AB1234"
+                    value={form.vehicleNumber} onChange={set('vehicleNumber')}
+                    style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '1px' }} />
                 </div>
                 <div className={styles.field}>
                   <label>Vehicle Type *</label>
@@ -242,8 +245,6 @@ export default function AdminReserve() {
               </div>
 
               <div className={styles.divider} />
-
-              {/* Slot selection */}
               <div className={styles.sectionLabel}>📍 Slot Assignment</div>
 
               <div className={styles.field}>
@@ -251,43 +252,27 @@ export default function AdminReserve() {
                   Choose Slot
                   <span className={styles.optional}> — {availableSlots.length} available in Zone {selectedCat?.zone}</span>
                 </label>
-
                 <input
-                  placeholder={`Search Zone ${selectedCat?.zone} slots or leave blank for auto-assign`}
-                  value={form.preferredSlot || slotSearch}
-                  onChange={e => {
-                    const val = e.target.value.toUpperCase()
-                    setSlotSearch(val)
-                    setForm(f => ({ ...f, preferredSlot: val }))
-                  }}
+                  placeholder={`Type slot ID or leave blank for auto-assign (Zone ${selectedCat?.zone})`}
+                  value={slotInput}
+                  onChange={handleSlotInputChange}
                   style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: 8 }}
                 />
-
-                {/* Slot picker grid */}
-                {filteredSlots.length > 0 && (
+                {visibleSlots.length > 0 && (
                   <div className={styles.slotPicker}>
-                    <div className={styles.slotPickerLabel}>Available slots — click to select:</div>
+                    <div className={styles.slotPickerLabel}>Click to select an available slot:</div>
                     <div className={styles.slotPickerGrid}>
-                      {filteredSlots.slice(0, 20).map(s => (
-                        <div
-                          key={s.slotId}
+                      {visibleSlots.slice(0, 24).map(s => (
+                        <div key={s.slotId}
                           className={`${styles.slotChip} ${form.preferredSlot === s.slotId ? styles.slotChipActive : ''}`}
-                          onClick={() => {
-                            setForm(f => ({ ...f, preferredSlot: s.slotId }))
-                            setSlotSearch(s.slotId)
-                          }}
-                        >
+                          onClick={() => selectSlot(s.slotId)}>
                           {s.slotId}
                         </div>
                       ))}
                     </div>
                     {form.preferredSlot && (
-                      <button
-                        type="button"
-                        className={styles.clearSlot}
-                        onClick={() => { setForm(f => ({ ...f, preferredSlot: '' })); setSlotSearch('') }}
-                      >
-                        ✕ Clear — auto assign
+                      <button type="button" className={styles.clearSlot} onClick={clearSlot}>
+                        ✕ Clear selection — use auto-assign
                       </button>
                     )}
                   </div>
@@ -296,13 +281,8 @@ export default function AdminReserve() {
 
               <div className={styles.field}>
                 <label>Notes <span className={styles.optional}>(optional)</span></label>
-                <textarea
-                  placeholder="e.g. VIP guest, event parking, temporary permit..."
-                  value={form.notes}
-                  onChange={set('notes')}
-                  rows={2}
-                  className={styles.textarea}
-                />
+                <textarea placeholder="e.g. VIP guest, event parking, temporary permit..."
+                  value={form.notes} onChange={set('notes')} rows={2} className={styles.textarea} />
               </div>
 
               <button type="submit" className={styles.submitBtn} disabled={loading}>
@@ -312,7 +292,7 @@ export default function AdminReserve() {
           </div>
         </div>
 
-        {/* ── Right: Reservations List ── */}
+        {/* ── List ── */}
         <div className={styles.listSection}>
           <div className={styles.card}>
             <div className={styles.listHeader}>
@@ -323,34 +303,25 @@ export default function AdminReserve() {
               <span className={styles.countBadge}>{reservations.length}</span>
             </div>
 
-            {/* Status filter */}
             <div className={styles.filterRow}>
-              {['all', 'reserved', 'active', 'completed', 'cancelled'].map(s => (
-                <button
-                  key={s}
+              {['all','reserved','active','completed','cancelled'].map(s => (
+                <button key={s}
                   className={`${styles.filterBtn} ${filterStatus === s ? styles.filterActive : ''}`}
-                  onClick={() => setFilterStatus(s)}
-                >
+                  onClick={() => setFilterStatus(s)}>
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               ))}
             </div>
 
             <div className={styles.reservationList}>
-              {listLoading && (
-                <div className={styles.emptyState}>Loading reservations...</div>
-              )}
+              {listLoading && <div className={styles.emptyState}>Loading...</div>}
               {!listLoading && filtered.length === 0 && (
-                <div className={styles.emptyState}>
-                  No {filterStatus !== 'all' ? filterStatus : ''} reservations found
-                </div>
+                <div className={styles.emptyState}>No {filterStatus !== 'all' ? filterStatus : ''} reservations found</div>
               )}
               {filtered.map(r => {
-                const st = STATUS_STYLE[r.status] || STATUS_STYLE.completed
-                // Use direct fields stored in schema
+                const st          = STATUS_STYLE[r.status] || STATUS_STYLE.completed
                 const displayName = r.holderName || r.user?.name || '—'
                 const displayRole = r.holderRole || r.user?.role || ''
-
                 return (
                   <div key={r._id} className={styles.reservationCard}>
                     <div className={styles.resSlotBadge}>{r.slotId}</div>
@@ -370,7 +341,7 @@ export default function AdminReserve() {
                       </div>
                       {(r.holderEmail || r.holderMobile) && (
                         <div className={styles.resContact}>
-                          {r.holderEmail && <span>✉ {r.holderEmail}</span>}
+                          {r.holderEmail  && <span>✉ {r.holderEmail}</span>}
                           {r.holderMobile && <span>📞 {r.holderMobile}</span>}
                         </div>
                       )}
@@ -380,23 +351,17 @@ export default function AdminReserve() {
                         </div>
                       )}
                       {r.adminNotes && (
-                        <div className={styles.resNotes} title={r.adminNotes}>
+                        <div className={styles.resNotes}>
                           📝 {r.adminNotes.length > 80 ? r.adminNotes.slice(0, 80) + '…' : r.adminNotes}
                         </div>
                       )}
                     </div>
                     <div className={styles.resRight}>
-                      <span
-                        className={styles.statusBadge}
-                        style={{ background: st.bg, color: st.color }}
-                      >
+                      <span className={styles.statusBadge} style={{ background: st.bg, color: st.color }}>
                         {st.label}
                       </span>
                       {(r.status === 'reserved' || r.status === 'active') && (
-                        <button
-                          className={styles.cancelBtn}
-                          onClick={() => handleCancel(r._id, r.slotId)}
-                        >
+                        <button className={styles.cancelBtn} onClick={() => handleCancel(r._id, r.slotId)}>
                           Cancel
                         </button>
                       )}
