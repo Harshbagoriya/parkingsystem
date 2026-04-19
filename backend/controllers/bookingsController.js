@@ -102,7 +102,10 @@ exports.cancelBooking = async (req, res) => {
     if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorised' })
     }
-    if (!['reserved', 'active'].includes(booking.status)) {
+    if (booking.status === 'active' || booking.status === 'exit_requested') {
+      return res.status(400).json({ message: 'Cannot cancel — vehicle is already parked. Wait for exit approval.' })
+    }
+    if (!['reserved'].includes(booking.status)) {
       return res.status(400).json({ message: 'Cannot cancel a completed or already cancelled booking' })
     }
 
@@ -292,7 +295,7 @@ exports.approveExit = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
     if (!booking) return res.status(404).json({ message: 'Booking not found' })
-    if (booking.status !== 'active') {
+    if (booking.status !== 'active' && booking.status !== 'exit_requested') {
       return res.status(400).json({ message: `Cannot approve exit — booking is ${booking.status}` })
     }
 
@@ -329,6 +332,31 @@ exports.approveExit = async (req, res) => {
       message: `Exit approved — ${booking.slotId} is now free. Duration: ${durationMin ?? '?'} min`,
       booking, durationMin
     })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// POST /api/bookings/:id/request-exit — user requests exit when leaving
+exports.requestExit = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+
+    // Only the booking owner can request exit
+    if (booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorised' })
+    }
+    if (booking.status !== 'active') {
+      return res.status(400).json({ message: `Cannot request exit — booking is ${booking.status}` })
+    }
+
+    booking.status = 'exit_requested'
+    await booking.save()
+
+    req.io.emit('booking:exit_requested', { bookingId: booking.bookingId, slotId: booking.slotId })
+
+    res.json({ message: 'Exit request sent. Please wait for admin approval.', booking })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
