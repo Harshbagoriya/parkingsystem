@@ -283,21 +283,7 @@
   margin-top: 3px;
 }
 
-/* ── Workflow hint ── */
-.workflowHint {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(61,158,255,0.05);
-  border: 1px solid rgba(61,158,255,0.1);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  margin-bottom: 12px;
-}
-.hintStep {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+
 
 /* ── Card status tints ── */
 .card_reserved { border-left: 3px solid var(--amber) !important; }
