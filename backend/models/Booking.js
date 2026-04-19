@@ -7,7 +7,7 @@ const bookingSchema = new mongoose.Schema({
   vehicleNumber: { type: String, required: true, uppercase: true },
   vehicleType:   { type: String },
   category:      { type: String },
-  status:        { type: String, enum: ['reserved','active','completed','cancelled'], default: 'reserved' },
+  status:        { type: String, enum: ['reserved','active','exit_requested','completed','cancelled'], default: 'reserved' },
   entryTime:     { type: Date, default: null },
   exitTime:      { type: Date, default: null },
   expiresAt:     { type: Date },
@@ -20,7 +20,6 @@ const bookingSchema = new mongoose.Schema({
   isAdminReserved: { type: Boolean, default: false },
 }, { timestamps: true })
 
-// Auto-generate bookingId
 bookingSchema.pre('save', async function (next) {
   if (!this.bookingId) {
     const count = await mongoose.model('Booking').countDocuments()
