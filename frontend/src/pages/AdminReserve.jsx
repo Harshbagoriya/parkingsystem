@@ -14,10 +14,10 @@ const VEHICLE_TYPES = {
   faculty:      [{ value: 'car',  label: 'Car' }, { value: 'suv', label: 'SUV / Jeep' }, { value: 'bike', label: 'Bike' }],
 }
 const STATUS_STYLE = {
-  reserved:  { label: 'Reserved',  color: 'var(--amber)',     bg: 'var(--amber-glow)' },
-  active:    { label: 'Active',    color: 'var(--green)',     bg: 'var(--green-glow)' },
-  completed: { label: 'Completed', color: 'var(--text-muted)',bg: 'rgba(255,255,255,0.04)' },
-  cancelled: { label: 'Cancelled', color: 'var(--red)',       bg: 'var(--red-glow)' },
+  reserved:  { label: 'Reserved',  color: 'var(--amber)',      bg: 'var(--amber-glow)' },
+  active:    { label: 'Active',    color: 'var(--green)',      bg: 'var(--green-glow)' },
+  completed: { label: 'Completed', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.04)' },
+  cancelled: { label: 'Cancelled', color: 'var(--red)',        bg: 'var(--red-glow)' },
 }
 
 const EMPTY_FORM = {
@@ -27,14 +27,15 @@ const EMPTY_FORM = {
 }
 
 export default function AdminReserve() {
-  const [form, setForm]             = useState(EMPTY_FORM)
-  const [loading, setLoading]       = useState(false)
-  const [confirmed, setConfirmed]   = useState(null)
-  const [reservations, setReservations] = useState([])
-  const [listLoading, setListLoading]   = useState(true)
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [form, setForm]           = useState(EMPTY_FORM)
+  const [loading, setLoading]     = useState(false)
+  const [confirmed, setConfirmed] = useState(null)
+  const [reservations, setReservations]   = useState([])
+  const [listLoading, setListLoading]     = useState(true)
+  const [filterStatus, setFilterStatus]   = useState('all')
   const [availableSlots, setAvailableSlots] = useState([])
-  const [slotInput, setSlotInput]   = useState('')   // separate state — no conflict with form.preferredSlot
+  const [slotInput, setSlotInput] = useState('')
+  const [actionLoading, setActionLoading] = useState({}) // { bookingId: true }
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
@@ -48,7 +49,6 @@ export default function AdminReserve() {
       const { data } = await api.get('/bookings/admin-reserve')
       setReservations(data.bookings || [])
     } catch (err) {
-      console.error('fetchReservations error:', err)
       setReservations([])
     } finally {
       setListLoading(false)
@@ -71,12 +71,10 @@ export default function AdminReserve() {
     setForm(f => ({ ...f, preferredSlot: slotId }))
     setSlotInput(slotId)
   }
-
   const clearSlot = () => {
     setForm(f => ({ ...f, preferredSlot: '' }))
     setSlotInput('')
   }
-
   const handleSlotInputChange = (e) => {
     const val = e.target.value.toUpperCase()
     setSlotInput(val)
@@ -85,10 +83,9 @@ export default function AdminReserve() {
 
   const handleSubmit = async e => {
     e.preventDefault()
-
-    if (!form.holderName.trim()) { toast.error('Holder name is required'); return }
+    if (!form.holderName.trim())    { toast.error('Holder name is required'); return }
     if (!form.vehicleNumber.trim()) { toast.error('Vehicle number is required'); return }
-    if (!form.vehicleType) { toast.error('Select a vehicle type'); return }
+    if (!form.vehicleType)          { toast.error('Select a vehicle type'); return }
 
     setLoading(true)
     try {
@@ -99,13 +96,12 @@ export default function AdminReserve() {
         vehicleType:   form.vehicleType,
         category:      form.category,
       }
-      if (form.holderEmail.trim())  payload.holderEmail  = form.holderEmail.trim()
-      if (form.holderMobile.trim()) payload.holderMobile = form.holderMobile.trim()
+      if (form.holderEmail.trim())   payload.holderEmail   = form.holderEmail.trim()
+      if (form.holderMobile.trim())  payload.holderMobile  = form.holderMobile.trim()
       if (form.preferredSlot.trim()) payload.preferredSlot = form.preferredSlot.toUpperCase().trim()
-      if (form.notes.trim())        payload.notes        = form.notes.trim()
+      if (form.notes.trim())         payload.notes         = form.notes.trim()
 
       const { data } = await api.post('/bookings/admin-reserve', payload)
-
       setConfirmed(data)
       toast.success(`✅ Slot ${data.booking.slotId} reserved for ${data.holderName}`)
       setForm(EMPTY_FORM)
@@ -113,10 +109,37 @@ export default function AdminReserve() {
       fetchReservations()
       fetchAvailableSlots('student_bike')
     } catch (err) {
-      const msg = err.response?.data?.message || 'Reservation failed'
-      toast.error(msg)
+      toast.error(err.response?.data?.message || 'Reservation failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ── Approve entry: reserved → active (slot occupied) ──────────
+  const handleApproveEntry = async (r) => {
+    setActionLoading(p => ({ ...p, [r._id]: 'entry' }))
+    try {
+      const { data } = await api.post(`/bookings/${r._id}/approve-entry`)
+      toast.success(`✅ ${data.message}`)
+      fetchReservations()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to approve entry')
+    } finally {
+      setActionLoading(p => ({ ...p, [r._id]: null }))
+    }
+  }
+
+  // ── Approve exit: active → completed (slot freed) ─────────────
+  const handleApproveExit = async (r) => {
+    setActionLoading(p => ({ ...p, [r._id]: 'exit' }))
+    try {
+      const { data } = await api.post(`/bookings/${r._id}/approve-exit`)
+      toast.success(`🚪 ${data.message}`)
+      fetchReservations()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to approve exit')
+    } finally {
+      setActionLoading(p => ({ ...p, [r._id]: null }))
     }
   }
 
@@ -145,7 +168,7 @@ export default function AdminReserve() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Admin Reservations</h1>
-          <p className={styles.subtitle}>Reserve parking slots for students, faculty, or guests</p>
+          <p className={styles.subtitle}>Reserve slots and approve vehicle entry / exit with one click</p>
         </div>
       </div>
 
@@ -272,7 +295,7 @@ export default function AdminReserve() {
                     </div>
                     {form.preferredSlot && (
                       <button type="button" className={styles.clearSlot} onClick={clearSlot}>
-                        ✕ Clear selection — use auto-assign
+                        ✕ Clear — use auto-assign
                       </button>
                     )}
                   </div>
@@ -292,7 +315,7 @@ export default function AdminReserve() {
           </div>
         </div>
 
-        {/* ── List ── */}
+        {/* ── Reservations list ── */}
         <div className={styles.listSection}>
           <div className={styles.card}>
             <div className={styles.listHeader}>
@@ -301,6 +324,12 @@ export default function AdminReserve() {
                 All Reservations
               </h2>
               <span className={styles.countBadge}>{reservations.length}</span>
+            </div>
+
+            {/* Legend */}
+            <div className={styles.workflowHint}>
+              <span className={styles.hintStep}>🟡 Reserved → click <b>Approve Entry</b> when vehicle arrives</span>
+              <span className={styles.hintStep}>🟢 Active → click <b>Approve Exit</b> when vehicle leaves</span>
             </div>
 
             <div className={styles.filterRow}>
@@ -316,15 +345,21 @@ export default function AdminReserve() {
             <div className={styles.reservationList}>
               {listLoading && <div className={styles.emptyState}>Loading...</div>}
               {!listLoading && filtered.length === 0 && (
-                <div className={styles.emptyState}>No {filterStatus !== 'all' ? filterStatus : ''} reservations found</div>
+                <div className={styles.emptyState}>
+                  No {filterStatus !== 'all' ? filterStatus : ''} reservations found
+                </div>
               )}
+
               {filtered.map(r => {
                 const st          = STATUS_STYLE[r.status] || STATUS_STYLE.completed
                 const displayName = r.holderName || r.user?.name || '—'
                 const displayRole = r.holderRole || r.user?.role || ''
+                const isActioning = actionLoading[r._id]
+
                 return (
-                  <div key={r._id} className={styles.reservationCard}>
+                  <div key={r._id} className={`${styles.reservationCard} ${styles['card_' + r.status]}`}>
                     <div className={styles.resSlotBadge}>{r.slotId}</div>
+
                     <div className={styles.resInfo}>
                       <div className={styles.resName}>
                         {displayName}
@@ -345,23 +380,53 @@ export default function AdminReserve() {
                           {r.holderMobile && <span>📞 {r.holderMobile}</span>}
                         </div>
                       )}
-                      {r.expiresAt && r.status === 'reserved' && (
-                        <div className={styles.resExpiry}>
-                          Expires: {new Date(r.expiresAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                      {r.entryTime && (
+                        <div className={styles.resTiming}>
+                          In: {new Date(r.entryTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                          {r.exitTime && ` · Out: ${new Date(r.exitTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`}
+                          {r.exitTime && ` · ${Math.round((new Date(r.exitTime) - new Date(r.entryTime)) / 60000)} min`}
                         </div>
                       )}
                       {r.adminNotes && (
                         <div className={styles.resNotes}>
-                          📝 {r.adminNotes.length > 80 ? r.adminNotes.slice(0, 80) + '…' : r.adminNotes}
+                          📝 {r.adminNotes.length > 60 ? r.adminNotes.slice(0, 60) + '…' : r.adminNotes}
                         </div>
                       )}
                     </div>
+
                     <div className={styles.resRight}>
                       <span className={styles.statusBadge} style={{ background: st.bg, color: st.color }}>
                         {st.label}
                       </span>
-                      {(r.status === 'reserved' || r.status === 'active') && (
-                        <button className={styles.cancelBtn} onClick={() => handleCancel(r._id, r.slotId)}>
+
+                      {/* Approve Entry — shown when reserved */}
+                      {r.status === 'reserved' && (
+                        <button
+                          className={styles.approveEntryBtn}
+                          onClick={() => handleApproveEntry(r)}
+                          disabled={!!isActioning}
+                          title="Vehicle has arrived — mark as parked"
+                        >
+                          {isActioning === 'entry' ? '⏳' : '✅ Approve Entry'}
+                        </button>
+                      )}
+
+                      {/* Approve Exit — shown when active */}
+                      {r.status === 'active' && (
+                        <button
+                          className={styles.approveExitBtn}
+                          onClick={() => handleApproveExit(r)}
+                          disabled={!!isActioning}
+                          title="Vehicle is leaving — free the slot"
+                        >
+                          {isActioning === 'exit' ? '⏳' : '🚪 Approve Exit'}
+                        </button>
+                      )}
+
+                      {/* Cancel — shown when reserved */}
+                      {r.status === 'reserved' && (
+                        <button className={styles.cancelBtn}
+                          onClick={() => handleCancel(r._id, r.slotId)}>
                           Cancel
                         </button>
                       )}
