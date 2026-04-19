@@ -11,7 +11,11 @@
 .title    { font-size: 24px; font-family: var(--font-display); margin-bottom: 4px; }
 .subtitle { font-size: 13px; color: var(--text-muted); }
 
-.filterRow { display: flex; gap: 6px; flex-wrap: wrap; }
+.filterRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .filterBtn {
   padding: 7px 14px;
   border-radius: 20px;
@@ -29,17 +33,24 @@
 
 .bookingList { display: flex; flex-direction: column; gap: 10px; }
 
+/* ── Card ── */
 .bookingCard {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
-  transition: transform 0.12s, border-color 0.12s;
+  transition: border-color 0.12s;
 }
-.bookingCard:hover { transform: translateX(4px); border-color: var(--border-md); }
+
+/* Status-based left border tint */
+.card_reserved       { border-left: 3px solid var(--amber); }
+.card_active         { border-left: 3px solid var(--green); }
+.card_exit_requested { border-left: 3px solid var(--accent); }
+.card_completed      { border-left: 3px solid var(--border-md); }
+.card_cancelled      { border-left: 3px solid var(--red); opacity: 0.7; }
 
 .cardLeft { flex-shrink: 0; }
 .slotBadge {
@@ -49,12 +60,33 @@
   border: 1px solid var(--border-md);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .cardMid { flex: 1; min-width: 0; }
-.cardRight { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
+.cardRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status message strip */
+.statusMsg {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: var(--bg-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
 
 .statusBadge {
   padding: 4px 12px;
@@ -64,6 +96,7 @@
   white-space: nowrap;
 }
 
+/* Cancel button */
 .cancelBtn {
   background: none;
   border: 1px solid var(--border-md);
@@ -75,7 +108,35 @@
   transition: all 0.15s;
   white-space: nowrap;
 }
-.cancelBtn:hover { border-color: var(--red); color: var(--red); }
+.cancelBtn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.cancelBtn:disabled { opacity: 0.5; }
+
+/* Request Exit button */
+.exitBtn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.exitBtn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+.exitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Waiting badge */
+.waitingBadge {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(61,158,255,0.08);
+  border: 1px solid rgba(61,158,255,0.2);
+  border-radius: 8px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
 
 .empty {
   text-align: center;
@@ -85,61 +146,21 @@
 .empty h3 { font-size: 18px; margin-bottom: 8px; font-family: var(--font-display); }
 .empty p  { font-size: 13px; }
 
-/* ── Mobile ─────────────────────────────────────────────────── */
+/* ── Mobile ── */
 @media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .title { font-size: 20px; }
-
-  /* Scrollable horizontal filter row */
+  .header { flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .title  { font-size: 20px; }
   .filterRow {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
-    gap: 8px;
     scrollbar-width: none;
   }
   .filterRow::-webkit-scrollbar { display: none; }
-  .filterBtn {
-    flex-shrink: 0;
-    padding: 6px 14px;
-  }
-
-  /* Booking cards stack better on small screens */
-  .bookingCard {
-    padding: 14px 14px;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  .bookingCard:hover { transform: none; }
-
-  .slotBadge {
-    width: 48px;
-    height: 48px;
-    font-size: 13px;
-    border-radius: 10px;
-  }
-
-  /* Status + cancel goes below vehicle info on very small screens */
-  .cardRight {
-    align-items: flex-end;
-    gap: 6px;
-  }
-}
-
-@media (max-width: 400px) {
-  .bookingCard {
-    flex-wrap: wrap;
-  }
-  .cardRight {
-    flex-direction: row;
-    align-items: center;
-    width: 100%;
-    justify-content: flex-end;
-    gap: 8px;
-  }
+  .filterBtn { flex-shrink: 0; }
+  .bookingCard { padding: 14px; gap: 12px; }
+  .slotBadge  { width: 48px; height: 48px; font-size: 12px; }
+  .cardRight  { align-items: flex-end; }
+  .statusMsg  { font-size: 10px; }
 }
