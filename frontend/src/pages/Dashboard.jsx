@@ -159,7 +159,32 @@ export default function Dashboard() {
         </>
       )}
 
-      
+      {/* ── USER ONLY: Zone availability as simple cards ── */}
+      {!isAdmin && (
+        <div className={styles.zoneCardsRow}>
+          {stats.zones.map(z => {
+            const pct  = Math.round(((z.total - z.available) / z.total) * 100)
+            const free = z.available
+            const color = free === 0 ? 'var(--red)' : free <= 2 ? 'var(--amber)' : 'var(--green)'
+            return (
+              <div key={z.name} className={styles.zoneCard}>
+                <div className={styles.zoneCardName}>{z.name}</div>
+                <div className={styles.zoneCardCount} style={{ color }}>{free}</div>
+                <div className={styles.zoneCardLabel}>slots free</div>
+                <div className={styles.progressTrack} style={{ marginTop: 10 }}>
+                  <div className={styles.progressFill} style={{
+                    width: `${pct}%`,
+                    background: pct > 70 ? 'var(--red)' : pct > 40 ? 'var(--amber)' : 'var(--green)'
+                  }} />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {pct}% occupied
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
