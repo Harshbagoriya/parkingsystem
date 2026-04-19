@@ -327,12 +327,7 @@ export default function AdminReserve() {
               <span className={styles.countBadge}>{reservations.length}</span>
             </div>
 
-            {/* Legend */}
-            <div className={styles.workflowHint}>
-              <span className={styles.hintStep}>🟡 Reserved → click <b>Approve Entry</b> when vehicle arrives</span>
-              <span className={styles.hintStep}>🟢 Active → waiting for user to click "Request Exit"</span>
-              <span className={styles.hintStep}>🔵 Exit Requested → user is at gate, click <b>Approve Exit</b> to free slot</span>
-            </div>
+           
 
             <div className={styles.filterRow}>
               {['all','reserved','active','completed','cancelled'].map(s => (
