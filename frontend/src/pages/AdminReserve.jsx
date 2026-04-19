@@ -330,8 +330,8 @@ export default function AdminReserve() {
             {/* Legend */}
             <div className={styles.workflowHint}>
               <span className={styles.hintStep}>🟡 Reserved → click <b>Approve Entry</b> when vehicle arrives</span>
-              <span className={styles.hintStep}>🟢 Active → click <b>Approve Exit</b> when vehicle leaves</span>
-              <span className={styles.hintStep}>🔵 Exit Requested → user clicked exit, click <b>Approve Exit</b> to free slot</span>
+              <span className={styles.hintStep}>🟢 Active → waiting for user to click "Request Exit"</span>
+              <span className={styles.hintStep}>🔵 Exit Requested → user is at gate, click <b>Approve Exit</b> to free slot</span>
             </div>
 
             <div className={styles.filterRow}>
@@ -413,8 +413,8 @@ export default function AdminReserve() {
                         </button>
                       )}
 
-                      {/* Approve Exit — shown when active or exit requested by user */}
-                      {(r.status === 'active' || r.status === 'exit_requested') && (
+                      {/* Approve Exit — only shown when user has requested exit */}
+                      {r.status === 'exit_requested' && (
                         <button
                           className={styles.approveExitBtn}
                           onClick={() => handleApproveExit(r)}
