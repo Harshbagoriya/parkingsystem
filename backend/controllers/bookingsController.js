@@ -244,3 +244,92 @@ exports.getAdminReservations = async (req, res) => {
     res.status(500).json({ message: err.message })
   }
 }
+
+// POST /api/bookings/:id/approve-entry — admin clicks "Approve Entry"
+// Marks booking active, slot occupied, logs entry
+exports.approveEntry = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+    if (booking.status !== 'reserved') {
+      return res.status(400).json({ message: `Cannot approve entry — booking is ${booking.status}` })
+    }
+
+    const EntryExit = require('../models/EntryExit')
+
+    // Activate booking
+    booking.status    = 'active'
+    booking.entryTime = new Date()
+    await booking.save()
+
+    // Mark slot occupied
+    await ParkingSlot.findOneAndUpdate(
+      { slotId: booking.slotId },
+      { status: 'occupied', currentVehicle: booking.vehicleNumber, currentBooking: booking._id }
+    )
+
+    // Log the entry event
+    await EntryExit.create({
+      vehicleNumber: booking.vehicleNumber,
+      slotId:        booking.slotId,
+      type:          'entry',
+      booking:       booking._id,
+      recordedBy:    req.user._id,
+      method:        'auto',
+    })
+
+    req.io.emit('slot:updated', { slotId: booking.slotId, status: 'occupied' })
+
+    res.json({ message: `Entry approved — ${booking.vehicleNumber} is now parked at ${booking.slotId}`, booking })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// POST /api/bookings/:id/approve-exit — admin clicks "Approve Exit"
+// Marks booking completed, slot available, logs exit
+exports.approveExit = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+    if (booking.status !== 'active') {
+      return res.status(400).json({ message: `Cannot approve exit — booking is ${booking.status}` })
+    }
+
+    const EntryExit = require('../models/EntryExit')
+
+    const exitTime   = new Date()
+    const durationMin = booking.entryTime
+      ? Math.round((exitTime - booking.entryTime) / 60000)
+      : null
+
+    booking.status   = 'completed'
+    booking.exitTime = exitTime
+    await booking.save()
+
+    // Free the slot
+    await ParkingSlot.findOneAndUpdate(
+      { slotId: booking.slotId },
+      { status: 'available', currentVehicle: null, currentBooking: null }
+    )
+
+    // Log the exit event
+    await EntryExit.create({
+      vehicleNumber: booking.vehicleNumber,
+      slotId:        booking.slotId,
+      type:          'exit',
+      booking:       booking._id,
+      recordedBy:    req.user._id,
+      method:        'auto',
+    })
+
+    req.io.emit('slot:updated', { slotId: booking.slotId, status: 'available' })
+
+    res.json({
+      message: `Exit approved — ${booking.slotId} is now free. Duration: ${durationMin ?? '?'} min`,
+      booking, durationMin
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
