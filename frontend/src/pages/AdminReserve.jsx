@@ -16,6 +16,7 @@ const VEHICLE_TYPES = {
 const STATUS_STYLE = {
   reserved:  { label: 'Reserved',  color: 'var(--amber)',      bg: 'var(--amber-glow)' },
   active:    { label: 'Active',    color: 'var(--green)',      bg: 'var(--green-glow)' },
+  exit_requested: { label: 'Exit Requested', color: 'var(--accent)', bg: 'rgba(61,158,255,0.12)' },
   completed: { label: 'Completed', color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.04)' },
   cancelled: { label: 'Cancelled', color: 'var(--red)',        bg: 'var(--red-glow)' },
 }
@@ -330,6 +331,7 @@ export default function AdminReserve() {
             <div className={styles.workflowHint}>
               <span className={styles.hintStep}>🟡 Reserved → click <b>Approve Entry</b> when vehicle arrives</span>
               <span className={styles.hintStep}>🟢 Active → click <b>Approve Exit</b> when vehicle leaves</span>
+              <span className={styles.hintStep}>🔵 Exit Requested → user clicked exit, click <b>Approve Exit</b> to free slot</span>
             </div>
 
             <div className={styles.filterRow}>
@@ -411,8 +413,8 @@ export default function AdminReserve() {
                         </button>
                       )}
 
-                      {/* Approve Exit — shown when active */}
-                      {r.status === 'active' && (
+                      {/* Approve Exit — shown when active or exit requested by user */}
+                      {(r.status === 'active' || r.status === 'exit_requested') && (
                         <button
                           className={styles.approveExitBtn}
                           onClick={() => handleApproveExit(r)}
