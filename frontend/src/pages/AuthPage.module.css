@@ -56,8 +56,8 @@
   position: relative;
   z-index: 2;
   background: rgba(16, 18, 8, 0.5);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
   padding: 36px 40px 40px;
 }
 
